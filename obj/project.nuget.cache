@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "dgSpecHash": "wkjQzO+Sr7sqmwbwoB7NhHxkhbiCN0kNu5cm6aoWhSi71jzmm5sW6GT3FCoKASlq6v3koE+cEvQMUCHXPvpllw==",
+  "success": true,
+  "projectFilePath": "C:\\repos\\StatAssesment\\StatAssesment.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\danie\\.nuget\\packages\\awssdk.core\\3.7.105.8\\awssdk.core.3.7.105.8.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\awssdk.extensions.netcore.setup\\3.7.4\\awssdk.extensions.netcore.setup.3.7.4.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\awssdk.s3\\3.7.103.15\\awssdk.s3.3.7.103.15.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\awssdk.s3control\\3.7.106.14\\awssdk.s3control.3.7.106.14.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\csvhelper\\30.0.1\\csvhelper.30.0.1.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\microsoft.aspnetcore.http.features\\5.0.17\\microsoft.aspnetcore.http.features.5.0.17.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\2.0.0\\microsoft.extensions.configuration.abstractions.2.0.0.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\2.0.0\\microsoft.extensions.dependencyinjection.abstractions.2.0.0.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\2.0.0\\microsoft.extensions.logging.abstractions.2.0.0.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\microsoft.extensions.primitives\\5.0.1\\microsoft.extensions.primitives.5.0.1.nupkg.sha512",
+    "C:\\Users\\danie\\.nuget\\packages\\system.io.pipelines\\5.0.2\\system.io.pipelines.5.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}
