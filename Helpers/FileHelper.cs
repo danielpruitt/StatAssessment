@@ -43,8 +43,7 @@ namespace StatAssesment.Helpers
         //        {
         //            using (var stream = entry.Open())
         //            {
-        //                // do whatever we want with stream
-        //                // ...
+        //           
         //            }
         //        }
         //    }

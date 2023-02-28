@@ -16,64 +16,60 @@ using System.IO;
 using StatAssesment.Models;
 using CsvHelper;
 using System.Globalization;
+using System.Text;
+using Console = Colorful.Console;
+using System.Drawing;
+using Amazon.Runtime.Internal.Transform;
 
 public class Program
 {
     //TODO: NULL OUT BEFORE CHECK IN! 
-    private static string region = "us-east-2";
-    private static string bucket = "";
-    private static string accessKeyId = "";
-    private static string secret = "";
-
+    
     private static async Task Main(string[] args)
     {
-
-     
         //don't need this, apparently doesn't work the way I thought
         //using (BucketConfig bc = new BucketConfig())
         //{
         //    bc.WriteProfile("danielpruitt6@gmail.com", accessKeyId, secret);
         //}
+
         var client = new AmazonS3Client(accessKeyId, secret, RegionEndpoint.USEast2);
 
-        using (AwsClientManager clientManager = new AwsClientManager())
+
+        Console.WriteLine("Listing Objects in Bucket");
+        var result = await client.ListObjectsAsync(bucket);
+
+        if (result != null)
         {
-            Console.WriteLine("Listing Objects in bucket");
-            var result = await client.ListObjectsAsync(bucket);
-
-            if (result != null)
+            var putObjectRequests = new List<PutObjectRequest>();
+            //might could optimize this with some parallel.foreach but may have some consequences
+            foreach (var key in result.S3Objects.Select(x => x.Key).ToList())
             {
-                List<PutObjectRequest> putObjectRequests = new List<PutObjectRequest>();
+                var request = new GetObjectRequest { BucketName = bucket, Key = key };
+                using var response = await client.GetObjectAsync(request);
+                using var zip = new ZipArchive(response.ResponseStream, ZipArchiveMode.Read);
+                var maps = new Dictionary<string, List<PONumbertModel>>();
+                List<ZipArchiveEntry> csvEntries = zip.Entries.Where(x => x.FullName.EndsWith(".csv")).ToList();
 
-               
-                foreach (var key in result.S3Objects.Select(x => x.Key).ToList())
+                using (var c = new AwsClientManager(client, bucket))
                 {
-                    //clientManager.OpenZipFile(client, key);
-                    var request = new GetObjectRequest { BucketName = "stat-coding-amanzfwaxlh", Key = key };
-                    using var response = await client.GetObjectAsync(request);
-                    using var zip = new ZipArchive(response.ResponseStream, ZipArchiveMode.Read);
-                    foreach (var entry in zip.Entries)
-                    {
-                        Console.WriteLine(entry.FullName);
-
-                        //Check for csv 
-                        
-
-                        //using var stream = entry.Open();
-                        // stream will contain decompressed data, do whatever you want with it
-                    }
+                    maps = c.GetPoNumbersByEntry(csvEntries);
                 }
 
-                //process object in other methods 
-                //parse csv 
-                //extract pdfs that have not been processed
-
-                //needs way more logic above 
-                //await clientManager.ProcessPutObject(client);
+                foreach (var item in maps)
+                {
+                    Console.WriteLine("===============================================", Color.Pink);
+                    Console.WriteLine($"CSV File {item.Key}");
+                    Console.WriteLine($"Contains PO Numbers: {item.Value.Count}");
+                    Console.WriteLine("\n");
+                    Console.WriteLine("===============================================", Color.Pink);
+                }
 
 
             }
+
         }
+
     }
 }
 

@@ -52,6 +52,10 @@
               "target": "Package",
               "version": "[3.7.106.14, )"
             },
+            "Colorful.Console": {
+              "target": "Package",
+              "version": "[1.2.15, )"
+            },
             "CsvHelper": {
               "target": "Package",
               "version": "[30.0.1, )"

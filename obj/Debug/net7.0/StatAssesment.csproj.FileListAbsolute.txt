@@ -25,3 +25,4 @@ C:\repos\StatAssesment\bin\Debug\net7.0\Microsoft.Extensions.Primitives.dll
 C:\repos\StatAssesment\bin\Debug\net7.0\System.IO.Pipelines.dll
 C:\repos\StatAssesment\obj\Debug\net7.0\StatAssesment.csproj.CopyComplete
 C:\repos\StatAssesment\bin\Debug\net7.0\CsvHelper.dll
+C:\repos\StatAssesment\bin\Debug\net7.0\Colorful.Console.dll
