@@ -34,6 +34,7 @@ namespace StatAssesment.Helpers
                         {
                             //this needs to actually map to returnEntity
                             setValue = csvValue;// string.IsNullOrEmpty(csvValue) && eachProperty.PropertyType != typeof(string) ? Activator.CreateInstance(eachProperty.PropertyType) : Convert.ChangeType(csvValue, eachProperty.PropertyType);
+                           
                         }
                         catch (Exception e)
                         {
@@ -44,6 +45,22 @@ namespace StatAssesment.Helpers
             }
             return returnEntity;
 
+        }
+
+        public string RemoveSpecialCharacters(string str)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < str.Length; i++)
+            {
+                if ((str[i] >= '0' && str[i] <= '9')
+                    || (str[i] >= 'A' && str[i] <= 'z'
+                        || (str[i] == '.' || str[i] == '_')))
+                {
+                    sb.Append(str[i]);
+                }
+            }
+
+            return sb.ToString();
         }
     }
 }

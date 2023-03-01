@@ -1,30 +1,21 @@
-﻿using System;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using Amazon;
+﻿using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.Runtime.CredentialManagement;
-using System.Collections.Generic;
-using StatAssesment.Configuration;
-using StatAssesment.Helpers;
 using System.IO.Compression;
-using System.Security.Cryptography.X509Certificates;
 using StatAssesment.Managers;
-using System.IO;
-using StatAssesment.Models;
-using CsvHelper;
-using System.Globalization;
-using System.Text;
 using Console = Colorful.Console;
 using System.Drawing;
-using Amazon.Runtime.Internal.Transform;
-
+using System.Text.RegularExpressions;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 public class Program
 {
     //TODO: NULL OUT BEFORE CHECK IN! 
-    
+    private static string region = "";
+    private static string bucket = "";
+    private static string accessKeyId = "";
+    private static string secret = "";
+
     private static async Task Main(string[] args)
     {
         //don't need this, apparently doesn't work the way I thought
@@ -35,37 +26,65 @@ public class Program
 
         var client = new AmazonS3Client(accessKeyId, secret, RegionEndpoint.USEast2);
 
-
         Console.WriteLine("Listing Objects in Bucket");
-        var result = await client.ListObjectsAsync(bucket);
+        var result = await client.ListObjectsAsync(bucket); // gets the 11 zips
 
         if (result != null)
         {
             var putObjectRequests = new List<PutObjectRequest>();
             //might could optimize this with some parallel.foreach but may have some consequences
-            foreach (var key in result.S3Objects.Select(x => x.Key).ToList())
+            foreach (var key in result.S3Objects.Select(x => x.Key).ToList()) // open's the zip 
             {
                 var request = new GetObjectRequest { BucketName = bucket, Key = key };
-                using var response = await client.GetObjectAsync(request);
+                using var response = await client.GetObjectAsync(request); // get just one of 
                 using var zip = new ZipArchive(response.ResponseStream, ZipArchiveMode.Read);
-                var maps = new Dictionary<string, List<PONumbertModel>>();
-                List<ZipArchiveEntry> csvEntries = zip.Entries.Where(x => x.FullName.EndsWith(".csv")).ToList();
 
+                //for this exercise, we're provide 1 csv per zip. if there's more we stop. 
+                //real world if there's more we may just need to check on various cases then merge them together
+                if (zip.Entries.Where(x => x.FullName.EndsWith(".csv")).ToList().Count > 1)
+                    throw new Exception(message:"too many csv");
+
+                var csvEntry = zip.Entries.Where(x => x.FullName.EndsWith(".csv")).FirstOrDefault() ?? null;
+                var poNumFromCsv = new List<string>(); // read fromcsv
+                var foundPoNumbers = new List<string>(); // this holds the pdf files that we need to flag
+                Console.WriteLine("=================SEARCH FOR PO NUMBERS====================", Color.Brown);
+
+                if (csvEntry != null)
+                {
+                    using (var c = new AwsClientManager(client, bucket))
+                    {
+                        (poNumFromCsv, foundPoNumbers) = c.GetPONumbers(csvEntry, zip.Entries.Select(x => x.FullName).ToList());
+                    }
+                 
+                }
+                
+                Console.WriteLine("=================PROCESS ENTRIES===========================", Color.Brown);
+
+                Regex rgx = new Regex("[^0-9 _]");
+
+                var entriesToUpload = new List<ZipArchiveEntry>();
+                var putObjectRequestList = new List<PutObjectRequest>();
                 using (var c = new AwsClientManager(client, bucket))
                 {
-                    maps = c.GetPoNumbersByEntry(csvEntries);
+                    entriesToUpload = c.ProcessEntries(zip.Entries.ToList(), foundPoNumbers);
+                    //download files to MS 
+                    foreach (var entry in entriesToUpload)
+                    {
+                        string poNumber = rgx.Replace(entry.Name, "");
+                        //Don't actually need this since entry.Open is a stream itself
+                        //Stream stream = await c.DownloadFileAsync(entry);
+                        Stream stream = entry.Open();
+                        bool hasTag = c.CheckMetaData(stream);
+
+                        if (!hasTag) // if hasTag that means there's metadata and it has been processed
+                        {
+                            await c.UploadDocumentToS3(stream, poNumber, entry.Name);
+                        }
+                    }
                 }
-
-                foreach (var item in maps)
-                {
-                    Console.WriteLine("===============================================", Color.Pink);
-                    Console.WriteLine($"CSV File {item.Key}");
-                    Console.WriteLine($"Contains PO Numbers: {item.Value.Count}");
-                    Console.WriteLine("\n");
-                    Console.WriteLine("===============================================", Color.Pink);
-                }
-
-
+                
+                //zip write metadata
+            
             }
 
         }

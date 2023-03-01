@@ -1,16 +1,15 @@
 ﻿using Amazon.S3.Model;
 using Amazon.S3;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using StatAssesment.Helpers;
 using System.IO.Compression;
 using Amazon.S3.Transfer;
 using StatAssesment.Models;
-using System.Reflection;
-using System.Net.Sockets;
+
+using Console = Colorful.Console;
+
+using iText.Kernel.Pdf;
+using System.IO;
+using Amazon.Runtime.Documents.Internal.Transform;
 
 namespace StatAssesment.Managers
 {
@@ -39,37 +38,7 @@ namespace StatAssesment.Managers
             }
         }
 
-        public async Task ProcessPutObject(AmazonS3Client client)
-        {
-            return;
-            if (false) // this will be a check on x-previously-read metadata to start processing the object 
-            {
-                string fileName = "";
-                string content = "";
-                string poNumber = "";
-                //upload back to bucket 
-                using (FileHelper fh = new FileHelper())
-                {
-                    try
-                    {
-                        await client.PutObjectAsync(fh.CreatePutObject(_bucketName, fileName, poNumber, content));
-                    }
-                    catch (AmazonS3Exception e)
-                    {
-                        Console.WriteLine(
-                                "Error encountered ***. Message:'{0}' when writing an object"
-                                , e.Message);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(
-                            "Unknown encountered on server. Message:'{0}' when writing an object"
-                            , e.Message);
-                    }
-                }
-            }
-
-        }
+      
 
         public async Task CreateZipFile(List<List<KeyVersion>> keyVersions)
         {
@@ -103,13 +72,17 @@ namespace StatAssesment.Managers
             var fileTxfr = new TransferUtility(_client);
             await fileTxfr.UploadAsync(zipMS, "dev-s3-zip-bucket", "test.zip");
         }
-
+        public string ConvertCSVToLine(string line) => line.Split('~')[9];
+      
         public PONumbertModel ConvertCSVToEntity(string line, string[] csvMetada)
         {
             var values = line.Split('~');
+            Console.WriteLine(line);
             PONumbertModel newRecord = new PONumbertModel()
             {
-                PONumber = values[15]
+                //PONumber = values[15]
+                PONumber = values[9]
+                //PONumber = values[10]
             };
             //need to fix mapper for scalability
             //using (ConverterHelper ch = new ConverterHelper())
@@ -120,38 +93,128 @@ namespace StatAssesment.Managers
             return newRecord;
         }
 
-        public Dictionary<string, List<PONumbertModel>> GetPoNumbersByEntry(List<ZipArchiveEntry> entries)
-        {
-            var maps = new Dictionary<string, List<PONumbertModel>>();
-
-            foreach (var csv in entries)
-            {
-               
-                    maps.Add(csv.FullName, this.ReadCSVTosModels(csv));
-                
-            }
-            return maps;
-        }
-        public List<PONumbertModel> ReadCSVTosModels(ZipArchiveEntry entry)
+        public List<string> ReadCSVTosModels(ZipArchiveEntry entry)
         {
             var maps = new List<PONumbertModel>();
+            var poNumbers = new List<string>();
             using (var reader = new StreamReader(entry.Open()))
             {
+                Console.WriteLine(reader.ToString());
                 //read first line with headers
                 var metaDataLine = reader.ReadLine() ?? "";
+               
                 //get array with headers
                 string[] csvMetada = metaDataLine.Split('~');
                 while (!reader.EndOfStream)
                 {
                     // create model based on string data and columns metadata with columns                      
-                    PONumbertModel newModel = ConvertCSVToEntity(reader.ReadLine() ?? "", csvMetada);
-                    maps.Add(newModel);
+                    //PONumbertModel newModel = ConvertCSVToEntity(reader.ReadLine() ?? "", csvMetada);
+                    //string poNumber = ConvertCSVToLine(reader.ReadLine());
+                    poNumbers.Add(ConvertCSVToLine(reader.ReadLine()));
+                    //maps.Add(newModel);
                 }
             }
-            return maps;
+            return poNumbers;
+            //return maps;
+        }
+
+        // this is searching a lot of long strings. could parse better but it would be best to map the CSV to a model. 
+        public List<string> GetListFoundPONumbers(List<string> entryNames, List<string> poNumbers)
+        {
+            var foundPoNumbers = new List<string>();
+            foreach (var entry in entryNames)
+            {
+                var name = entry;
+                var foundNumber = poNumbers.Where(x => x.Contains(name)).FirstOrDefault();
+                if (foundNumber != null)
+                {
+                    foundPoNumbers.Add(name);
+                    //Console.WriteLine("PoNumber found " + name, Color.Sienna);
+                }
+            }
+
+            return foundPoNumbers;
         }
 
 
+        public(List<string> poNumFromCsv, List<string> foundPONumbers) GetPONumbers(ZipArchiveEntry csvEntry, List<string> pdfFileNames)
+        {
 
+            var poNumFromCsv = new List<string>(); // read fromcsv
+            var foundPoNumbers = new List<string>(); // this holds the pdf files that we need to flag
+
+            poNumFromCsv = ReadCSVTosModels(csvEntry); //send off the csv entry to be read and mapped to see all ponumbers
+
+            foundPoNumbers = GetListFoundPONumbers(pdfFileNames, poNumFromCsv); // this holds the pdf files that we need to flag
+
+            return (poNumFromCsv, foundPoNumbers);
+        }
+
+        public List<ZipArchiveEntry> ProcessEntries(List<ZipArchiveEntry> allEntries, List<string> poNumbers)
+        {
+            var processedEntries = new List<ZipArchiveEntry>();
+
+            foreach (var item in poNumbers)
+            {
+                var entry = allEntries.Where(x => x.FullName.Contains(item)).FirstOrDefault();
+                //TODO: need to uncomment the real condition to check 
+                //TODO: actually look into metadata on the opened pdf 
+                //if (entry != null && !entry.Comment.Contains("- processed;")) // this check looks to see if it was processed before ideally we would be writing something to a db table to compare against a list of those entries 
+                if (entry != null) // this check looks to see if it was processed before ideally we would be writing something to a db table to compare against a list of those entries 
+                {
+                    entry.Comment = $"{DateTime.UtcNow} - processed;";
+                    Console.WriteLine(entry.Comment);
+                  
+
+                    processedEntries.Add(entry);
+                }
+            }
+
+            return processedEntries;
+        }
+      
+        public async Task<Stream> DownloadFileAsync(ZipArchiveEntry entry) => entry.Open();
+      
+
+        public async Task UploadDocumentToS3(Stream stream, string poNumber, string fileName)
+        {
+            PutObjectRequest fileRequest = new PutObjectRequest();
+
+            fileRequest.BucketName = $"by-po/{poNumber}/{fileName}";
+            fileRequest.CannedACL = S3CannedACL.Private;
+            fileRequest.StorageClass = S3StorageClass.Standard;
+
+            //adding to metadata to read if processed. If this has a value beign a date it's been processed
+            fileRequest.Metadata.Add("x-previous-read-date", DateTime.UtcNow.ToString());
+            fileRequest.InputStream = stream;
+            
+            //don't want to post at the moment, just want to look at the object
+            //await _client.PutObjectAsync(fileRequest);
+
+        }
+        public bool CheckMetaData(Stream stream)
+        {
+            bool hasPrevDate = false;
+          
+            byte[] bytes;
+            using (var ms = new MemoryStream())
+            {
+                stream.CopyTo(ms);
+                bytes = ms.ToArray();
+            }
+            using var inputStream = new MemoryStream(bytes);
+            using var reader = new  PdfReader(inputStream);
+            using var outputStream = new MemoryStream();
+            using var writer = new PdfWriter(outputStream);
+            using (var document = new PdfDocument(reader, writer))
+            {
+                var metadata = document.GetDocumentInfo();
+                if (metadata == null)
+                    return true;
+                //documentInfo.SetTitle(title);
+            }
+
+            return hasPrevDate;
+        }
     }
 }
