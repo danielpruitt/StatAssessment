@@ -3,13 +3,13 @@ using Amazon.S3;
 using StatAssesment.Helpers;
 using System.IO.Compression;
 using Amazon.S3.Transfer;
-using StatAssesment.Models;
 
 using Console = Colorful.Console;
 
 using iText.Kernel.Pdf;
 using System.IO;
 using Amazon.Runtime.Documents.Internal.Transform;
+using StatAssesment.Data.Models;
 
 namespace StatAssesment.Managers
 {
@@ -74,32 +74,31 @@ namespace StatAssesment.Managers
         }
         public string ConvertCSVToLine(string line) => line.Split('~')[9];
       
-        public PONumbertModel ConvertCSVToEntity(string line, string[] csvMetada)
-        {
-            var values = line.Split('~');
-            Console.WriteLine(line);
-            PONumbertModel newRecord = new PONumbertModel()
-            {
-                //PONumber = values[15]
-                PONumber = values[9]
-                //PONumber = values[10]
-            };
-            //need to fix mapper for scalability
-            //using (ConverterHelper ch = new ConverterHelper())
-            //{
-            //    newRecord = ch.ConvertCSVToEntity<CsvMap>(values, csvMetada);
+        //public PONumbertModel ConvertCSVToEntity(string line, string[] csvMetada)
+        //{
+        //    var values = line.Split('~');
+        //    Console.WriteLine(line);
+        //    PONumbertModel newRecord = new PONumbertModel()
+        //    {
+        //        //PONumber = values[15]
+        //        PONumber = values[9]
+        //        //PONumber = values[10]
+        //    };
+        //    //need to fix mapper for scalability
+        //    //using (ConverterHelper ch = new ConverterHelper())
+        //    //{
+        //    //    newRecord = ch.ConvertCSVToEntity<CsvMap>(values, csvMetada);
 
-            //}
-            return newRecord;
-        }
+        //    //}
+        //    return newRecord;
+        //}
 
         public List<string> ReadCSVTosModels(ZipArchiveEntry entry)
         {
-            var maps = new List<PONumbertModel>();
+            var maps = new List<KomarExtract>();
             var poNumbers = new List<string>();
             using (var reader = new StreamReader(entry.Open()))
             {
-                Console.WriteLine(reader.ToString());
                 //read first line with headers
                 var metaDataLine = reader.ReadLine() ?? "";
                
@@ -211,7 +210,6 @@ namespace StatAssesment.Managers
                 var metadata = document.GetDocumentInfo();
                 if (metadata == null)
                     return true;
-                //documentInfo.SetTitle(title);
             }
 
             return hasPrevDate;

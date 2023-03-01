@@ -30,3 +30,6 @@ Secret: xxxxxxxxxxxxxxxxxxxxxxxx
 
 Put together a console app in C# using .NET 7 that performs the functions above. Commit the code to a public GitHub repo you create, but exclude the S3 credentials from your code. Let me know if you have any questions, or need to be pointed in the right direction on anything. Approach this as if you were working at STAT already - reaching out for help is much better than spending days stuck in the same place. 
 
+
+
+Plenty of optimizations can be done for this including async calls and less loops. But that may be for another day. 

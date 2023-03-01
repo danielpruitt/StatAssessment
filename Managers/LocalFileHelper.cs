@@ -1,5 +1,5 @@
 ﻿using StatAssesment.Helpers;
-using StatAssesment.Models;
+//using StatAssesment.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace StatAssesment.Managers
 {
+    //before i had the right methods to open the bucket, i was going to mock some stuff just with some local files.
     public class LocalFileHelper : BaseHelper
     {
         public LocalFileHelper() { }
@@ -42,16 +43,7 @@ namespace StatAssesment.Managers
                 return true;
             return false;
         }
-        //public List<CsvMap> ExtractCsv(string path)
-        //{
-        //    List<CsvMap> myExtraction = new List<CsvMap>();
-        //    foreach (string line in temp)
-        //    {
-        //        var delimitedLine = line.Split('\t'); //set ur separator, in this case tab
-
-        //        myExtraction.Add(new MyMappedCSVFile(delimitedLine[0], delimitedLine[3]));
-        //    }
-        //}
+        
 
         public (List<string>, List<string>) ReadCsv(string path)
         {
